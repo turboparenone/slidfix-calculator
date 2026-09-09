@@ -1,0 +1,51 @@
+SLIDFIX — UI COPY STARTER
+
+Header:
+Wall Fastener Calculator
+Calculate the required SlidFix units for your cladding wall in seconds.
+
+Wall presets:
+Blank wall
+Window center
+Door left
+Door center
+Two windows
+
+Controls:
+Wall width
+Wall height
+Board width
+Batten spacing
+Opening width
+Opening height
+Placement pattern
+Standard — Straight rows
+Staggered — Offset rows
+Spacing mode
+Standard
+Dense
+
+Visualization:
+LIVE WALL VISUALIZATION
+FASTENER POSITIONS BEHIND BOARDS
+SIDE VIEW
+SlidFix unit
+2 screws / unit
+Pattern based on wall geometry and selected spacing.
+
+Results:
+CALCULATION RESULTS
+Gross wall area
+Net wall area
+Board courses
+SlidFix units
+Packs needed
+Screws required
+10 units / pack
+2 / unit
+
+CTA:
+ADD {N} PACKS TO CART
+DOWNLOAD LAYOUT SVG
+DOWNLOAD PROJECT JSON
+SEND PROJECT TO DEALER
