@@ -43,48 +43,58 @@
         </section>
 
         <section class="control-section">
-          <div class="section-title"><b>02</b><span>Размеры стены</span></div>
-          <div class="field-grid four">
+          <div class="section-title"><b>02</b><span>Облицовка</span></div>
+          <p class="field-note" id="orientationLabel">Ориентация доски</p>
+          <div class="pattern-options orientation-options" role="group" aria-labelledby="orientationLabel">
+            <button class="pattern-card active" data-board-orientation="vertical"><i class="board-icon vertical" aria-hidden="true"></i><span><strong>Вертикальная</strong><small>Доски по высоте стены</small></span></button>
+            <button class="pattern-card" data-board-orientation="horizontal"><i class="board-icon horizontal" aria-hidden="true"></i><span><strong>Горизонтальная</strong><small>Ряды по ширине стены</small></span></button>
+          </div>
+          <label class="spaced-field">Ширина доски <small>мм</small><input id="boardWidth" type="number" min="50" max="500" step="5" value="125"></label>
+        </section>
+
+        <section class="control-section">
+          <div class="section-title"><b>03</b><span>Размеры стены</span></div>
+          <div class="field-grid two">
             <label>Ширина стены <small>м</small><input id="wallWidth" type="number" min="1" max="30" step="0.1" value="6.0"></label>
             <label>Высота стены <small>м</small><input id="wallHeight" type="number" min="1" max="10" step="0.1" value="2.8"></label>
-            <label>Ширина доски <small>мм</small><input id="boardWidth" type="number" min="50" max="500" step="5" value="125"></label>
-            <label>Шаг обрешётки <small>мм</small><input id="battenSpacing" type="number" min="200" max="1200" step="10" value="600"></label>
           </div>
+        </section>
+
+        <section class="control-section">
+          <div class="section-title"><b>04</b><span>Каркас</span></div>
+          <label title="Расстояние между осями соседних лаг">Шаг лаг <small>мм</small><input id="lagSpacingMm" type="number" min="400" max="600" step="1" value="600" aria-describedby="lagSpacingHint"></label>
+          <p class="field-note input-hint" id="lagSpacingHint">Расстояние между осями соседних лаг</p>
+          <div class="quick-options" role="group" aria-label="Быстрый выбор шага лаг">
+            <button data-input="lagSpacingMm" data-value="400">400 мм</button><button data-input="lagSpacingMm" data-value="500">500 мм</button><button data-input="lagSpacingMm" data-value="600">600 мм</button>
+          </div>
+          <label class="spaced-field">Шаг рядов креплений <small>мм</small><input id="verticalFastenerPitchMm" type="number" min="400" max="600" step="1" value="500"></label>
+          <div class="quick-options" role="group" aria-label="Быстрый выбор шага рядов креплений">
+            <button data-input="verticalFastenerPitchMm" data-value="400">400 мм</button><button data-input="verticalFastenerPitchMm" data-value="500">500 мм</button><button data-input="verticalFastenerPitchMm" data-value="600">600 мм</button>
+          </div>
+          <p class="field-note input-hint">Оба шага — демонстрационные параметры, а не нормы монтажа.</p>
         </section>
 
         <section class="control-section opening-fields" id="openingFields">
-          <div class="section-title"><b>03</b><span>Размеры проёма</span><em>для выбранного типа стены</em></div>
-          <p class="field-note">Размер проёма автоматически ограничивается размерами стены. Для варианта с двумя окнами размеры применяются к каждому окну.</p>
+          <div class="section-title"><b>05</b><span>Проёмы</span><em>для выбранного типа стены</em></div>
+          <p class="field-note">Размеры ограничиваются геометрией стены. Для двух окон ширина и высота применяются к каждому окну.</p>
           <div class="field-grid two">
-            <label>Ширина проёма <small>м</small><input id="openingWidth" type="number" min="0.3" max="8" step="0.1" value="1.8"></label>
-            <label>Высота проёма <small>м</small><input id="openingHeight" type="number" min="0.3" max="5" step="0.1" value="1.2"></label>
+            <label>Ширина проёма <small>м</small><input id="openingWidth" type="number" min="0.2" step="any" value="1.8"></label>
+            <label>Высота проёма <small>м</small><input id="openingHeight" type="number" min="0.3" step="any" value="1.2"></label>
+            <label id="sillField">Высота подоконной зоны <small>мм</small><input id="sillHeightMm" type="number" min="0" step="1" value="850"></label>
+            <label id="mullionField">Ширина простенка между окнами <small>мм</small><input id="mullionWidthMm" type="number" min="100" step="1" value="1200"></label>
           </div>
         </section>
 
         <section class="control-section">
-          <div class="section-title"><b>04</b><span>Схема расстановки</span></div>
+          <div class="section-title"><b>06</b><span>Схема креплений</span></div>
           <div class="pattern-options" id="patternOptions">
-            <button class="pattern-card active" data-pattern="standard">
-              <i class="pattern-icon standard"></i><span><strong>Стандартная</strong><small>Прямые ряды</small></span>
-            </button>
-            <button class="pattern-card" data-pattern="staggered">
-              <i class="pattern-icon staggered"></i><span><strong>Шахматная</strong><small>Со смещением</small></span>
-            </button>
+            <button class="pattern-card active" data-pattern="standard"><i class="pattern-icon standard" aria-hidden="true"></i><span><strong>Стандартная</strong><small>Все допустимые пролёты</small></span></button>
+            <button class="pattern-card" data-pattern="staggered"><i class="pattern-icon staggered" aria-hidden="true"></i><span><strong>Шахматная</strong><small>Экономичная схема</small></span></button>
           </div>
+          <p class="field-note input-hint">В шахматной схеме пролёты чередуются через ряд. Применимость схемы требует инженерного подтверждения.</p>
         </section>
 
-        <section class="control-section">
-          <div class="section-title"><b>05</b><span>Плотность расстановки</span></div>
-          <div class="pattern-options" id="densityOptions">
-            <button class="pattern-card active" data-density="standard">
-              <i class="density-icon standard-density"></i><span><strong>Стандартная</strong><small>Демонстрационный шаг 500 мм</small></span>
-            </button>
-            <button class="pattern-card" data-density="dense">
-              <i class="density-icon dense-density"></i><span><strong>Усиленная</strong><small>Демонстрационный шаг 350 мм</small></span>
-            </button>
-          </div>
-        </section>
-
+        <p id="geometryMessage" class="field-note geometry-message" role="status" aria-live="polite"></p>
         <p id="inputMessage" class="field-note" role="status" aria-live="polite"></p>
         <div class="info-box">
           <div class="info-icon" aria-hidden="true">ⓘ</div>
@@ -103,7 +113,9 @@
             <aside class="legend-card" aria-labelledby="legendTitle">
               <div class="legend-title" id="legendTitle">УСЛОВНЫЕ ОБОЗНАЧЕНИЯ</div>
               <div class="legend-row"><span class="marker-dot" aria-hidden="true"></span><strong>Точка установки SlidFix</strong></div>
-              <p>Маркеры показывают предварительные точки установки креплений за облицовкой.</p>
+              <div class="legend-row"><span class="lag-swatch" aria-hidden="true"></span><strong>Лага — ось каркаса</strong></div>
+              <div class="legend-row"><span class="opening-swatch" aria-hidden="true"></span><strong>Проём</strong></div>
+              <p>Точки расположены посередине пролётов между соседними лагами.</p>
               <p>Проёмы и зоны отступа исключаются автоматически.</p>
               <p class="legend-note">Визуализация показывает расположение креплений, а не их конструкцию.</p>
             </aside>
@@ -115,11 +127,15 @@
           <div class="metrics">
             <article><small>Общая площадь стены</small><strong id="grossArea">16,8 м²</strong><em id="grossDims">6,0 × 2,8 м</em></article>
             <article><small>Полезная площадь</small><strong id="netArea">14,6 м²</strong><em>за вычетом проёмов</em></article>
-            <article><small>Количество рядов доски</small><strong id="boardCourses">23</strong><em id="boardCourseNote">доска 125 мм</em></article>
+            <article><small id="boardCountLabel">Количество досок по ширине</small><strong id="boardCourses">48</strong><em id="boardCourseNote">доска 125 мм</em></article>
             <article class="accent"><small>Крепления SlidFix</small><strong id="unitCount">0</strong><em>шт.</em></article>
             <article><small>Упаковок необходимо</small><strong id="packCount">0</strong><em>10 шт. в упаковке</em></article>
             <article><small>Шурупов необходимо</small><strong id="screwCount">0</strong><em>2 шт. на крепление</em></article>
+            <article><small>Количество лаг</small><strong id="lagCount">0</strong><em>оси каркаса</em></article>
+            <article><small>Количество пролётов</small><strong id="spanCount">0</strong><em>между соседними лагами</em></article>
+            <article><small>Количество рядов</small><strong id="rowCount">0</strong><em>ряды креплений по высоте</em></article>
           </div>
+          <p class="field-note">Количество осей и пролётов показано до исключения проёмов. Это схема, а не ведомость закупки каркаса.</p>
           <p class="field-note">Предварительный расчёт. Онлайн-заказ пока недоступен; скачайте схему или проект ниже.</p>
           <div class="actions">
             <button class="primary" id="cartBtn" disabled title="Онлайн-заказ пока недоступен">КОРЗИНА НЕ ПОДКЛЮЧЕНА</button>
