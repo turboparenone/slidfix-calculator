@@ -14,8 +14,6 @@ const ENGINEERING = {
   maxLagSpacingMm: 600,
   lagWidthMm: 50,
   defaultBoardThicknessMm: 20,
-  minBoardThicknessMm: 1,
-  maxBoardThicknessMm: 100,
   edgeClearanceMm: 180,
   openingClearanceMm: 110, // Temporary UX/demo clearance, not a validated installation rule.
   openingSideInsetMm: 180,
@@ -23,7 +21,7 @@ const ENGINEERING = {
   minOpeningWidthMm: 200,
   minOpeningHeightMm: 300,
   minMullionWidthMm: 100,
-  defaultWindowSillHeightMm: 850,
+  defaultWindowSillHeightMm: 800,
   defaultMullionWidthMm: 1200,
   defaultDoorHeightMm: 2100,
 };
@@ -31,7 +29,7 @@ const ENGINEERING = {
 const state = {
   preset: 'window-center',
   pattern: 'standard',
-  boardOrientation: 'vertical',
+  boardOrientation: 'horizontal',
   wallWidth: 6.0,
   wallHeight: 2.8,
   boardWidthMm: 125,
@@ -58,7 +56,7 @@ const DEMO_WARNING = 'Предварительный расчёт. Текущи�
 
 const FIELD_LABELS = {
   wallWidth:'ширина стены', wallHeight:'высота стены', boardWidthMm:'ширина доски',
-  lagSpacingMm:'шаг лаг', boardThicknessMm:'толщина доски',
+  lagSpacingMm:'шаг лаг',
   openingWidth:'ширина проёма', openingHeight:'высота проёма',
   sillHeightMm:'высота подоконной зоны', mullionWidthMm:'ширина простенка',
 };
@@ -74,7 +72,6 @@ function inputBounds(){
   return {
     wallWidth:[1,30], wallHeight:[1,10], boardWidthMm:[50,500],
     lagSpacingMm:[ENGINEERING.minLagSpacingMm,ENGINEERING.maxLagSpacingMm],
-    boardThicknessMm:[ENGINEERING.minBoardThicknessMm,ENGINEERING.maxBoardThicknessMm],
     openingWidth:[ENGINEERING.minOpeningWidthMm/1000,(two?(availableWidth-ENGINEERING.minMullionWidthMm)/2:availableWidth)/1000],
     openingHeight:[ENGINEERING.minOpeningHeightMm/1000,availableHeight/1000],
     sillHeightMm:[0,availableHeight-ENGINEERING.minOpeningHeightMm],
@@ -89,7 +86,7 @@ function normalizeState(editedId=null){
     if(Math.abs(next-state[id])>EPSILON) adjusted.add(id);
     state[id]=next;
   }
-  ['wallWidth','wallHeight','boardWidthMm','lagSpacingMm','boardThicknessMm'].forEach(id=>limit(id,...inputBounds()[id]));
+  ['wallWidth','wallHeight','boardWidthMm','lagSpacingMm'].forEach(id=>limit(id,...inputBounds()[id]));
   if(state.preset!=='blank'){
     const bounds=inputBounds();
     const openingFields=['openingWidth','openingHeight'];
@@ -177,10 +174,7 @@ function buildLagPositions(lagOrientation){
   const edge=ENGINEERING.edgeClearanceMm,end=extentMm-edge,positions=[];
   const count=Math.floor((end-edge+EPSILON)/state.lagSpacingMm);
   for(let i=0;i<=count;i++) positions.push(round((edge+i*state.lagSpacingMm)/1000));
-  // Optional far-edge lag: don't duplicate an axis or overlap the preceding 50 mm band.
-  // Edge clearance is a minimum axis inset in the direction in which lags repeat.
-  const remainder=end-positions[positions.length-1]*1000;
-  if(remainder>=ENGINEERING.lagWidthMm-EPSILON) positions.push(round(end/1000));
+  // Keep the selected axis spacing everywhere; never append a closer far-edge lag.
   return positions;
 }
 

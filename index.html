@@ -46,12 +46,10 @@
           <div class="section-title"><b>02</b><span>Облицовка</span></div>
           <p class="field-note" id="orientationLabel">Ориентация доски</p>
           <div class="pattern-options orientation-options" role="group" aria-labelledby="orientationLabel">
-            <button class="pattern-card active" data-board-orientation="vertical"><i class="board-icon vertical" aria-hidden="true"></i><span><strong>Вертикальная</strong><small>Доски по высоте стены</small></span></button>
-            <button class="pattern-card" data-board-orientation="horizontal"><i class="board-icon horizontal" aria-hidden="true"></i><span><strong>Горизонтальная</strong><small>Ряды по ширине стены</small></span></button>
+            <button class="pattern-card" data-board-orientation="vertical"><i class="board-icon vertical" aria-hidden="true"></i><span><strong>Вертикальная</strong><small>Доски по высоте стены</small></span></button>
+            <button class="pattern-card active" data-board-orientation="horizontal"><i class="board-icon horizontal" aria-hidden="true"></i><span><strong>Горизонтальная</strong><small>Ряды по ширине стены</small></span></button>
           </div>
           <label class="spaced-field">Ширина доски <small>мм</small><input id="boardWidthMm" type="number" min="50" max="500" step="5" value="125"></label>
-          <label class="spaced-field">Толщина доски <small>мм</small><input id="boardThicknessMm" type="number" min="1" max="100" step="1" value="20" aria-describedby="thicknessHint"></label>
-          <p class="field-note input-hint" id="thicknessHint">Толщина сохраняется в проекте и пока не влияет на количество креплений.</p>
         </section>
 
         <section class="control-section">
@@ -70,7 +68,7 @@
             <button data-input="lagSpacingMm" data-value="400">400 мм</button><button data-input="lagSpacingMm" data-value="500">500 мм</button><button data-input="lagSpacingMm" data-value="600">600 мм</button>
           </div>
           <p class="field-note input-hint" id="lagWidthLabel">Ширина лаги: 50 мм — демонстрационная.</p>
-          <p class="field-note input-hint" id="lagOrientationLabel">Лаги горизонтальные — поперёк вертикальных досок.</p>
+          <p class="field-note input-hint" id="lagOrientationLabel">Лаги вертикальные — поперёк горизонтальных досок.</p>
           <p class="field-note input-hint">Крепление устанавливается на лагу. Шаг и отступы — демонстрационные параметры.</p>
         </section>
 
@@ -80,7 +78,7 @@
           <div class="field-grid two">
             <label>Ширина проёма <small>м</small><input id="openingWidth" type="number" min="0.2" step="any" value="1.8"></label>
             <label>Высота проёма <small>м</small><input id="openingHeight" type="number" min="0.3" step="any" value="1.2"></label>
-            <label id="sillField">Высота подоконной зоны <small>мм</small><input id="sillHeightMm" type="number" min="0" step="1" value="850"></label>
+            <label id="sillField">Высота подоконной зоны <small>мм</small><input id="sillHeightMm" type="number" min="0" step="1" value="800"></label>
             <label id="mullionField">Ширина простенка между окнами <small>мм</small><input id="mullionWidthMm" type="number" min="100" step="1" value="1200"></label>
           </div>
         </section>
@@ -133,7 +131,7 @@
           <div class="metrics">
             <article><small>Общая площадь стены</small><strong id="grossArea">16,8 м²</strong><em id="grossDims">6,0 × 2,8 м</em></article>
             <article><small>Полезная площадь</small><strong id="netArea">14,6 м²</strong><em>за вычетом проёмов</em></article>
-            <article><small>Количество досок</small><strong id="boardCount">48</strong><em id="boardCourseNote">доска 125 мм</em></article>
+            <article><small>Количество досок</small><strong id="boardCount">23</strong><em id="boardCourseNote">доска 125 мм</em></article>
             <article class="accent"><small>Крепления SlidFix</small><strong id="unitCount">0</strong><em>шт.</em></article>
             <article><small>Упаковок необходимо</small><strong id="packCount">0</strong><em>10 шт. в упаковке</em></article>
             <article><small>Шурупов необходимо</small><strong id="screwCount">0</strong><em>2 шт. на крепление</em></article>
