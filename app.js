@@ -12,9 +12,10 @@ const ENGINEERING = {
   defaultLagSpacingMm: 600,
   minLagSpacingMm: 400,
   maxLagSpacingMm: 600,
-  standardVerticalPitchMm: 500,
-  minVerticalFastenerPitchMm: 400,
-  maxVerticalFastenerPitchMm: 600,
+  lagWidthMm: 50,
+  defaultBoardThicknessMm: 20,
+  minBoardThicknessMm: 1,
+  maxBoardThicknessMm: 100,
   edgeClearanceMm: 180,
   openingClearanceMm: 110, // Temporary UX/demo clearance, not a validated installation rule.
   openingSideInsetMm: 180,
@@ -33,9 +34,10 @@ const state = {
   boardOrientation: 'vertical',
   wallWidth: 6.0,
   wallHeight: 2.8,
-  boardWidth: 125,
+  boardWidthMm: 125,
   lagSpacingMm: ENGINEERING.defaultLagSpacingMm,
-  verticalFastenerPitchMm: ENGINEERING.standardVerticalPitchMm,
+  // Board thickness is currently stored as a project parameter but does not change quantity until validated SlidFix engineering rules are supplied.
+  boardThicknessMm: ENGINEERING.defaultBoardThicknessMm,
   openingWidth: 1.8,
   openingHeight: 1.2,
   sillHeightMm: ENGINEERING.defaultWindowSillHeightMm,
@@ -55,8 +57,8 @@ const formatDimension = value => dimensionFormat.format(value);
 const DEMO_WARNING = 'Предварительный расчёт. Текущие параметры шага и расстановки используются для демонстрации работы калькулятора и будут уточнены после утверждения инженерного регламента SlidFix.';
 
 const FIELD_LABELS = {
-  wallWidth:'ширина стены', wallHeight:'высота стены', boardWidth:'ширина доски',
-  lagSpacingMm:'шаг лаг', verticalFastenerPitchMm:'шаг рядов креплений',
+  wallWidth:'ширина стены', wallHeight:'высота стены', boardWidthMm:'ширина доски',
+  lagSpacingMm:'шаг лаг', boardThicknessMm:'толщина доски',
   openingWidth:'ширина проёма', openingHeight:'высота проёма',
   sillHeightMm:'высота подоконной зоны', mullionWidthMm:'ширина простенка',
 };
@@ -70,9 +72,9 @@ function inputBounds(){
   const availableHeight=state.wallHeight*1000-ENGINEERING.openingTopInsetMm;
   const two=state.preset==='two-windows';
   return {
-    wallWidth:[1,30], wallHeight:[1,10], boardWidth:[50,500],
+    wallWidth:[1,30], wallHeight:[1,10], boardWidthMm:[50,500],
     lagSpacingMm:[ENGINEERING.minLagSpacingMm,ENGINEERING.maxLagSpacingMm],
-    verticalFastenerPitchMm:[ENGINEERING.minVerticalFastenerPitchMm,ENGINEERING.maxVerticalFastenerPitchMm],
+    boardThicknessMm:[ENGINEERING.minBoardThicknessMm,ENGINEERING.maxBoardThicknessMm],
     openingWidth:[ENGINEERING.minOpeningWidthMm/1000,(two?(availableWidth-ENGINEERING.minMullionWidthMm)/2:availableWidth)/1000],
     openingHeight:[ENGINEERING.minOpeningHeightMm/1000,availableHeight/1000],
     sillHeightMm:[0,availableHeight-ENGINEERING.minOpeningHeightMm],
@@ -87,7 +89,7 @@ function normalizeState(editedId=null){
     if(Math.abs(next-state[id])>EPSILON) adjusted.add(id);
     state[id]=next;
   }
-  ['wallWidth','wallHeight','boardWidth','lagSpacingMm','verticalFastenerPitchMm'].forEach(id=>limit(id,...inputBounds()[id]));
+  ['wallWidth','wallHeight','boardWidthMm','lagSpacingMm','boardThicknessMm'].forEach(id=>limit(id,...inputBounds()[id]));
   if(state.preset!=='blank'){
     const bounds=inputBounds();
     const openingFields=['openingWidth','openingHeight'];
@@ -159,60 +161,67 @@ function getOpenings(){
   return [];
 }
 
-function buildLagPositions(){
-  const edge=ENGINEERING.edgeClearanceMm,end=state.wallWidth*1000-edge,positions=[];
+function buildBoards(){
+  const extentMm=(state.boardOrientation==='vertical'?state.wallWidth:state.wallHeight)*1000;
+  const boardCount=Math.ceil((extentMm-EPSILON)/state.boardWidthMm);
+  const boards=Array.from({length:boardCount},(_,index)=>({
+    index,start:round(index*state.boardWidthMm/1000),end:round(Math.min((index+1)*state.boardWidthMm,extentMm)/1000),
+  }));
+  // Only INTERNAL board boundaries are joints; a trimmed final board has no extra outer joint.
+  const jointPositions=boards.slice(1).map(board=>board.start);
+  return {boards,boardCount,jointCount:jointPositions.length,jointPositions};
+}
+
+function buildLagPositions(lagOrientation){
+  const extentMm=(lagOrientation==='horizontal'?state.wallHeight:state.wallWidth)*1000;
+  const edge=ENGINEERING.edgeClearanceMm,end=extentMm-edge,positions=[];
   const count=Math.floor((end-edge+EPSILON)/state.lagSpacingMm);
   for(let i=0;i<=count;i++) positions.push(round((edge+i*state.lagSpacingMm)/1000));
-  // Close the frame at the far edge; the final span may be shorter, never wider.
-  if(end/1000-positions[positions.length-1]>EPSILON) positions.push(round(end/1000));
+  // Optional far-edge lag: don't duplicate an axis or overlap the preceding 50 mm band.
+  // Edge clearance is a minimum axis inset in the direction in which lags repeat.
+  const remainder=end-positions[positions.length-1]*1000;
+  if(remainder>=ENGINEERING.lagWidthMm-EPSILON) positions.push(round(end/1000));
   return positions;
 }
 
-function spanIntersectsOpening(span,y,opening){
+function pointIntersectsOpening(point,opening){
   const clear=ENGINEERING.openingClearanceMm/1000;
-  // Test the whole span at this row, not only its midpoint; boundary contact is excluded too.
-  return span.right>=opening.x-clear-EPSILON && span.left<=opening.x+opening.w+clear+EPSILON &&
-    y>=opening.y-clear-EPSILON && y<=opening.y+opening.h+clear+EPSILON;
+  return point.x>=opening.x-clear-EPSILON && point.x<=opening.x+opening.w+clear+EPSILON &&
+    point.y>=opening.y-clear-EPSILON && point.y<=opening.y+opening.h+clear+EPSILON;
 }
 
 function calculateLayout(){
-  const lagPositions=buildLagPositions(),openings=getOpenings();
-  const spans=lagPositions.slice(0,-1).map((left,index)=>({index,left,right:lagPositions[index+1],center:round((left+lagPositions[index+1])/2)}));
-  const rowPositions=[],points=[];
-  const edge=ENGINEERING.edgeClearanceMm,end=state.wallHeight*1000-edge;
-  const rowCount=Math.floor((end-edge+EPSILON)/state.verticalFastenerPitchMm)+1;
-  for(let rowIndex=0;rowIndex<rowCount;rowIndex++){
-    const y=round((edge+rowIndex*state.verticalFastenerPitchMm)/1000);
-    rowPositions.push(y);
-    spans.forEach(span=>{
-      if(state.pattern==='staggered' && span.index%2!==rowIndex%2) return;
-      if(!openings.some(opening=>spanIntersectsOpening(span,y,opening))) points.push({x:span.center,y,spanIndex:span.index,rowIndex});
+  // Physical model: boards → joints → perpendicular lags → joint × lag intersections.
+  // Fasteners mount ON lags. No span midpoints or independent fastening rows exist.
+  const boardLayout=buildBoards();
+  const lagOrientation=state.boardOrientation==='vertical'?'horizontal':'vertical';
+  const lagPositions=buildLagPositions(lagOrientation),openings=getOpenings();
+  const potentialPoints=[],points=[];
+  boardLayout.jointPositions.forEach((joint,jointIndex)=>{
+    const available=[];
+    lagPositions.forEach((lag,lagIndex)=>{
+      // The exact lag-axis coordinate is used directly: a point cannot lie between lags.
+      const point=lagOrientation==='horizontal'?{x:joint,y:lag,jointIndex,lagIndex}:{x:lag,y:joint,jointIndex,lagIndex};
+      if(!openings.some(opening=>pointIntersectsOpening(point,opening))) available.push(point);
     });
-  }
-  // Axes are interrupted at actual openings; this is not a lintel/framing takeoff.
-  const lagSegments=[];
-  lagPositions.forEach((x,lagIndex)=>{
-    let segments=[{bottom:0,top:state.wallHeight}];
-    openings.filter(o=>x>=o.x-EPSILON&&x<=o.x+o.w+EPSILON).forEach(o=>{
-      segments=segments.flatMap(segment=>{
-        if(o.y>=segment.top || o.y+o.h<=segment.bottom) return [segment];
-        const parts=[];
-        if(o.y>segment.bottom) parts.push({bottom:segment.bottom,top:o.y});
-        if(o.y+o.h<segment.top) parts.push({bottom:o.y+o.h,top:segment.top});
-        return parts;
-      });
-    });
-    segments.forEach(segment=>lagSegments.push({x,lagIndex,...segment}));
+    potentialPoints.push(...available);
+    if(state.pattern==='standard'){points.push(...available);return;}
+    const alternating=available.filter(point=>(jointIndex+point.lagIndex)%2===0);
+    if(alternating.length) points.push(...alternating);
+    // A partially blocked joint must not lose every fastener merely because of parity.
+    // Keep one real available intersection; never create a point off the lag.
+    else if(available.length) points.push({...available[0],coverageFallback:true});
   });
-  return {lagPositions,spans,spanCount:spans.length,rowPositions,lagSegments,points,openings};
+  return {...boardLayout,lagOrientation,lagPositions,openings,potentialPoints,points,
+    mountPointCount:potentialPoints.length,coverageFallbackCount:points.filter(p=>p.coverageFallback).length};
 }
 
 function drawWall(){
   svg.innerHTML='';
   el('title').textContent='Схема расположения креплений SlidFix';
-  el('desc').textContent=DEMO_WARNING;
+  el('desc').textContent=`Крепления SlidFix устанавливаются на лаги в точках пересечения со стыками соседних досок. Крепления не размещаются между лагами. ${DEMO_WARNING}`;
   const layout=calculateLayout();
-  const {points,openings,lagSegments}=layout;
+  const {points,openings,boards,jointPositions,lagOrientation,lagPositions}=layout;
   const VW=1000,VH=540;
   const pad={l:72,r:34,t:60,b:54};
   const availableW=VW-pad.l-pad.r,availableH=VH-pad.t-pad.b;
@@ -231,26 +240,32 @@ function drawWall(){
   const shadow=el('filter',{id:'shadow',x:'-20%',y:'-20%',width:'140%',height:'140%'},defs); el('feDropShadow',{dx:'0',dy:'8',stdDeviation:'10','flood-color':'#000','flood-opacity':'.4'},shadow);
 
   el('rect',{x:x0,y:y0,width:w,height:h,rx:4,fill:'url(#wood)',stroke:'#65717a','stroke-width':1,filter:'url(#shadow)'});
-  // Board orientation changes cladding only; lag axes and span-based fasteners stay vertical.
-  const boards=el('g',{'data-layer':'cladding'});
-  const boardM=state.boardWidth/1000;
+  // Clip cladding, joints and lag bands at actual openings; no complete line is discarded.
+  const mask=el('mask',{id:'wallSurface',maskUnits:'userSpaceOnUse',x:x0,y:y0,width:w,height:h},defs);
+  el('rect',{x:x0,y:y0,width:w,height:h,fill:'white'},mask);
+  openings.forEach(o=>el('rect',{x:wall(o.x),y:wy(o.y+o.h),width:o.w*sx,height:o.h*sy,fill:'black'},mask));
+  // Inline highlight styles travel with SVG, but contain no product illustrations.
+  el('style',{},defs).textContent='.joint-line[data-highlight="true"]{stroke:#ffe0a6;stroke-width:3}.lag-axis[data-highlight="true"]{stroke:#fff;stroke-width:3}.lag-band[data-highlight="true"]{fill-opacity:.4}';
   const vertical=state.boardOrientation==='vertical';
-  const boardExtent=vertical?state.wallWidth:state.wallHeight;
-  for(let position=boardM;position<boardExtent;position+=boardM){
+  const cladding=el('g',{'data-layer':'cladding',mask:'url(#wallSurface)'});
+  boards.forEach(board=>{
+    const attrs=vertical?{x:wall(board.start),y:y0,width:(board.end-board.start)*sx,height:h}:{x:x0,y:wy(board.end),width:w,height:(board.end-board.start)*sy};
+    el('rect',{...attrs,fill:board.index%2?'#d2a06b':'#704b2c','fill-opacity':.1,'data-board-index':board.index},cladding);
+  });
+  const joints=el('g',{'data-layer':'joints',mask:'url(#wallSurface)'});
+  jointPositions.forEach((position,jointIndex)=>{
     const attrs=vertical?{x1:wall(position),y1:y0,x2:wall(position),y2:y0+h}:{x1:x0,y1:wy(position),x2:x0+w,y2:wy(position)};
-    el('line',{...attrs,stroke:'#6d472b','stroke-opacity':.65,'stroke-width':1},boards);
-  }
-  // grain lines
-  for(let i=0;i<18;i++){
-    const gy=y0+((i+1)/(19))*h;
-    el('path',{d:`M ${x0} ${gy} C ${x0+w*.24} ${gy-4} ${x0+w*.55} ${gy+5} ${x0+w} ${gy-2}`,fill:'none',stroke:'#d4a16b','stroke-opacity':.10,'stroke-width':2});
-  }
-
-  const lagLayer=el('g',{'data-layer':'lags'});
-  lagSegments.forEach(segment=>el('line',{
-    x1:wall(segment.x),y1:wy(segment.top),x2:wall(segment.x),y2:wy(segment.bottom),
-    stroke:'#e0e8ee','stroke-width':2,'stroke-dasharray':'9 5','stroke-opacity':.7,'data-lag-index':segment.lagIndex,
-  },lagLayer));
+    el('line',{...attrs,class:'joint-line',stroke:'#533821','stroke-width':1.2,'data-joint-index':jointIndex},joints);
+  });
+  const lagLayer=el('g',{'data-layer':'lags',mask:'url(#wallSurface)'});
+  const lagWidth=ENGINEERING.lagWidthMm/1000;
+  lagPositions.forEach((position,lagIndex)=>{
+    const horizontal=lagOrientation==='horizontal';
+    const band=horizontal?{x:x0,y:wy(position+lagWidth/2),width:w,height:lagWidth*sy}:{x:wall(position-lagWidth/2),y:y0,width:lagWidth*sx,height:h};
+    const axis=horizontal?{x1:x0,y1:wy(position),x2:x0+w,y2:wy(position)}:{x1:wall(position),y1:y0,x2:wall(position),y2:y0+h};
+    el('rect',{...band,class:'lag-band',fill:'#d5e2e8','fill-opacity':.22,stroke:'#c4d4dd','stroke-opacity':.3,'stroke-width':.6,'data-lag-index':lagIndex},lagLayer);
+    el('line',{...axis,class:'lag-axis',stroke:'#e0e8ee','stroke-width':1.5,'stroke-dasharray':'9 5','data-lag-index':lagIndex},lagLayer);
+  });
 
   // openings
   const openingLayer=el('g',{'data-layer':'openings'});
@@ -269,9 +284,13 @@ function drawWall(){
   const pointLayer=el('g',{'data-layer':'points'});
   points.forEach(p=>{
     const X=wall(p.x),Y=wy(p.y);
-    el('circle',{cx:X,cy:Y,r:6.4,fill:'#f4f6f7',stroke:'#ff302a','stroke-width':3,'data-span-index':p.spanIndex,'data-row-index':p.rowIndex},pointLayer);
-    el('circle',{cx:X,cy:Y,r:1.8,fill:'#ff302a'},pointLayer);
+    const marker=el('g',{class:'fastener-marker','data-joint-index':p.jointIndex,'data-lag-index':p.lagIndex},pointLayer);
+    el('title',{},marker).textContent=`Крепление между досками №${p.jointIndex+1} и №${p.jointIndex+2}. Лага №${p.lagIndex+1}. Крепление устанавливается на лагу.`;
+    el('circle',{cx:X,cy:Y,r:4.8,fill:'#f4f6f7',stroke:'#ff302a','stroke-width':2},marker);
+    el('circle',{cx:X,cy:Y,r:1.5,fill:'#ff302a'},marker);
   });
+  $('markerHint').textContent='Наведите на точку, чтобы увидеть её стык и лагу. На схеме с фокусом используйте стрелки.';
+  activeMarkerIndex=-1;
 
   // dimensions
   const dimY=y0-24; el('line',{x1:x0,y1:dimY,x2:x0+w,y2:dimY,stroke:'#d6dde2','stroke-width':1.4});
@@ -293,18 +312,47 @@ function updateResults(layout){
   const net=Math.max(0,gross-openingArea);
   const packs=Math.ceil(unitCount/ENGINEERING.packSize);
   const screws=unitCount*ENGINEERING.screwsPerUnit;
-  const vertical=state.boardOrientation==='vertical';
-  const courses=Math.ceil(((vertical?state.wallWidth:state.wallHeight)*1000)/state.boardWidth);
-  $('boardCountLabel').textContent=vertical?'Количество досок по ширине':'Количество рядов доски';
   $('lagCount').textContent=layout.lagPositions.length;
-  $('spanCount').textContent=layout.spanCount;
-  $('rowCount').textContent=layout.rowPositions.length;
+  $('jointCount').textContent=layout.jointCount;
+  $('mountPointCount').textContent=layout.mountPointCount;
+  $('boardCount').textContent=layout.boardCount;
+  $('lagOrientationLabel').textContent=layout.lagOrientation==='horizontal'?'Лаги горизонтальные — поперёк вертикальных досок.':'Лаги вертикальные — поперёк горизонтальных досок.';
+  $('lagWidthLabel').textContent=`Ширина лаги: ${formatNumber(ENGINEERING.lagWidthMm)} мм — демонстрационная.`;
+  $('coverageNotice').hidden=layout.coverageFallbackCount===0;
+  $('coverageNotice').textContent=`Для стыков, у которых проёмы закрыли все чередующиеся позиции, сохранена одна доступная точка на лаге. Таких стыков: ${layout.coverageFallbackCount}.`;
   $('grossArea').textContent=`${formatDimension(gross)} м²`; $('grossDims').textContent=`${formatDimension(state.wallWidth)} × ${formatDimension(state.wallHeight)} м`;
-  $('netArea').textContent=`${formatDimension(net)} м²`; $('boardCourses').textContent=courses; $('boardCourseNote').textContent=`доска ${formatNumber(state.boardWidth)} мм`;
+  $('netArea').textContent=`${formatDimension(net)} м²`; $('boardCourseNote').textContent=`${state.boardOrientation==='vertical'?'по ширине':'по высоте'} стены · ${formatNumber(state.boardWidthMm)} мм`;
   $('unitCount').textContent=unitCount; $('packCount').textContent=packs; $('screwCount').textContent=screws;
   $('cartBtn').textContent=`${packs} уп. · КОРЗИНА НЕ ПОДКЛЮЧЕНА`;
-  $('miniPattern').textContent=`${PATTERN_LABELS[state.pattern].toUpperCase()} · лаги ${formatNumber(state.lagSpacingMm)} мм · ряды ${formatNumber(state.verticalFastenerPitchMm)} мм`;
+  $('miniPattern').textContent=`${PATTERN_LABELS[state.pattern].toUpperCase()} · ${layout.lagOrientation==='horizontal'?'горизонтальные':'вертикальные'} лаги · ${formatNumber(state.lagSpacingMm)} мм`;
 }
+
+let activeMarkerIndex=-1;
+function highlightMarker(marker){
+  svg.querySelectorAll('[data-highlight]').forEach(node=>node.removeAttribute('data-highlight'));
+  if(!marker) return;
+  const joint=marker.dataset.jointIndex,lag=marker.dataset.lagIndex;
+  svg.querySelector(`.joint-line[data-joint-index="${joint}"]`)?.setAttribute('data-highlight','true');
+  svg.querySelectorAll(`.lag-axis[data-lag-index="${lag}"],.lag-band[data-lag-index="${lag}"]`).forEach(node=>node.setAttribute('data-highlight','true'));
+  $('markerHint').textContent=marker.querySelector('title').textContent;
+}
+svg.addEventListener('pointerover',event=>{
+  const marker=event.target.closest('.fastener-marker');
+  if(marker) highlightMarker(marker);
+});
+svg.addEventListener('pointerleave',()=>{
+  highlightMarker(null);$('markerHint').textContent='Крепления SlidFix устанавливаются на лаги в точках пересечения со стыками соседних досок.';
+});
+svg.addEventListener('keydown',event=>{
+  if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Escape'].includes(event.key)) return;
+  event.preventDefault();
+  if(event.key==='Escape'){highlightMarker(null);activeMarkerIndex=-1;return;}
+  const markers=svg.querySelectorAll('.fastener-marker');
+  if(!markers.length) return;
+  const direction=['ArrowLeft','ArrowUp'].includes(event.key)?-1:1;
+  activeMarkerIndex=activeMarkerIndex<0?(direction<0?markers.length-1:0):(activeMarkerIndex+direction+markers.length)%markers.length;
+  highlightMarker(markers[activeMarkerIndex]);
+});
 
 numericIds.forEach(id=>{
   const input=$(id);
@@ -347,18 +395,22 @@ document.querySelectorAll('[data-input]').forEach(button=>button.addEventListene
 
 $('downloadSvgBtn').addEventListener('click',()=>{
   const clone=svg.cloneNode(true);clone.setAttribute('xmlns',NS);
+  clone.removeAttribute('tabindex');clone.removeAttribute('aria-describedby');
+  clone.querySelectorAll('[data-highlight]').forEach(node=>node.removeAttribute('data-highlight'));
   const blob=new Blob([new XMLSerializer().serializeToString(clone)],{type:'image/svg+xml'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='slidfix-wall-layout.svg';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 });
 $('downloadJsonBtn').addEventListener('click',()=>{
   const layout=calculateLayout();
   const data={
-    schemaVersion:2,brand:'SlidFix',warning:DEMO_WARNING,generatedAt:new Date().toISOString(),
+    schemaVersion:3,brand:'SlidFix',warning:DEMO_WARNING,generatedAt:new Date().toISOString(),
     coordinateUnit:'m',state:{...state},engineeringDemoConstants:ENGINEERING,
-    boardOrientation:state.boardOrientation,lagSpacingMm:state.lagSpacingMm,
-    lagPositions:layout.lagPositions,lagCount:layout.lagPositions.length,
-    spans:layout.spans,spanCount:layout.spanCount,rowPositions:layout.rowPositions,
-    verticalFastenerPitchMm:state.verticalFastenerPitchMm,pattern:state.pattern,
+    boardOrientation:state.boardOrientation,boardWidthMm:state.boardWidthMm,boardThicknessMm:state.boardThicknessMm,
+    boardCount:layout.boardCount,jointCount:layout.jointCount,jointPositions:layout.jointPositions,
+    jointAxis:state.boardOrientation==='vertical'?'x':'y',
+    lagOrientation:layout.lagOrientation,lagSpacingMm:state.lagSpacingMm,lagWidthMm:ENGINEERING.lagWidthMm,
+    lagPositions:layout.lagPositions,lagAxis:layout.lagOrientation==='vertical'?'x':'y',lagCount:layout.lagPositions.length,
+    mountPointCount:layout.mountPointCount,coverageFallbackCount:layout.coverageFallbackCount,pattern:state.pattern,
     sillHeightMm:state.preset.startsWith('door')||state.preset==='blank'?null:state.sillHeightMm,
     mullionWidthMm:state.preset==='two-windows'?state.mullionWidthMm:null,
     openings:layout.openings,points:layout.points,unitCount:layout.points.length,

@@ -49,7 +49,9 @@
             <button class="pattern-card active" data-board-orientation="vertical"><i class="board-icon vertical" aria-hidden="true"></i><span><strong>Вертикальная</strong><small>Доски по высоте стены</small></span></button>
             <button class="pattern-card" data-board-orientation="horizontal"><i class="board-icon horizontal" aria-hidden="true"></i><span><strong>Горизонтальная</strong><small>Ряды по ширине стены</small></span></button>
           </div>
-          <label class="spaced-field">Ширина доски <small>мм</small><input id="boardWidth" type="number" min="50" max="500" step="5" value="125"></label>
+          <label class="spaced-field">Ширина доски <small>мм</small><input id="boardWidthMm" type="number" min="50" max="500" step="5" value="125"></label>
+          <label class="spaced-field">Толщина доски <small>мм</small><input id="boardThicknessMm" type="number" min="1" max="100" step="1" value="20" aria-describedby="thicknessHint"></label>
+          <p class="field-note input-hint" id="thicknessHint">Толщина сохраняется в проекте и пока не влияет на количество креплений.</p>
         </section>
 
         <section class="control-section">
@@ -67,11 +69,9 @@
           <div class="quick-options" role="group" aria-label="Быстрый выбор шага лаг">
             <button data-input="lagSpacingMm" data-value="400">400 мм</button><button data-input="lagSpacingMm" data-value="500">500 мм</button><button data-input="lagSpacingMm" data-value="600">600 мм</button>
           </div>
-          <label class="spaced-field">Шаг рядов креплений <small>мм</small><input id="verticalFastenerPitchMm" type="number" min="400" max="600" step="1" value="500"></label>
-          <div class="quick-options" role="group" aria-label="Быстрый выбор шага рядов креплений">
-            <button data-input="verticalFastenerPitchMm" data-value="400">400 мм</button><button data-input="verticalFastenerPitchMm" data-value="500">500 мм</button><button data-input="verticalFastenerPitchMm" data-value="600">600 мм</button>
-          </div>
-          <p class="field-note input-hint">Оба шага — демонстрационные параметры, а не нормы монтажа.</p>
+          <p class="field-note input-hint" id="lagWidthLabel">Ширина лаги: 50 мм — демонстрационная.</p>
+          <p class="field-note input-hint" id="lagOrientationLabel">Лаги горизонтальные — поперёк вертикальных досок.</p>
+          <p class="field-note input-hint">Крепление устанавливается на лагу. Шаг и отступы — демонстрационные параметры.</p>
         </section>
 
         <section class="control-section opening-fields" id="openingFields">
@@ -88,12 +88,13 @@
         <section class="control-section">
           <div class="section-title"><b>06</b><span>Схема креплений</span></div>
           <div class="pattern-options" id="patternOptions">
-            <button class="pattern-card active" data-pattern="standard"><i class="pattern-icon standard" aria-hidden="true"></i><span><strong>Стандартная</strong><small>Все допустимые пролёты</small></span></button>
+            <button class="pattern-card active" data-pattern="standard"><i class="pattern-icon standard" aria-hidden="true"></i><span><strong>Стандартная</strong><small>Все допустимые пересечения</small></span></button>
             <button class="pattern-card" data-pattern="staggered"><i class="pattern-icon staggered" aria-hidden="true"></i><span><strong>Шахматная</strong><small>Экономичная схема</small></span></button>
           </div>
-          <p class="field-note input-hint">В шахматной схеме пролёты чередуются через ряд. Применимость схемы требует инженерного подтверждения.</p>
+          <p class="field-note input-hint">В шахматной схеме пересечения стыков и лаг чередуются. Каждый стык получает крепление, если на нём есть доступная точка. Применимость схемы требует инженерного подтверждения.</p>
         </section>
 
+        <p id="coverageNotice" class="field-note geometry-message" role="status" hidden></p>
         <p id="geometryMessage" class="field-note geometry-message" role="status" aria-live="polite"></p>
         <p id="inputMessage" class="field-note" role="status" aria-live="polite"></p>
         <div class="info-box">
@@ -109,33 +110,38 @@
             <div class="mini-pattern" id="miniPattern"></div>
           </div>
           <div class="visual-wrap">
-            <svg lang="ru" id="wallSvg" viewBox="0 0 1000 540" role="img" aria-label="Схема расположения креплений SlidFix"></svg>
+            <svg lang="ru" id="wallSvg" tabindex="0" aria-describedby="markerHint" viewBox="0 0 1000 540" role="img" aria-label="Схема расположения креплений SlidFix"></svg>
             <aside class="legend-card" aria-labelledby="legendTitle">
               <div class="legend-title" id="legendTitle">УСЛОВНЫЕ ОБОЗНАЧЕНИЯ</div>
               <div class="legend-row"><span class="marker-dot" aria-hidden="true"></span><strong>Точка установки SlidFix</strong></div>
-              <div class="legend-row"><span class="lag-swatch" aria-hidden="true"></span><strong>Лага — ось каркаса</strong></div>
+              <div class="legend-row"><span class="joint-swatch" aria-hidden="true"></span><strong>Граница досок — стык</strong></div>
+              <div class="legend-row"><span class="lag-swatch" aria-hidden="true"></span><strong>Лага — пунктирная ось</strong></div>
+              <div class="legend-row"><span class="band-swatch" aria-hidden="true"></span><strong>Ширина лаги 50 мм</strong></div>
               <div class="legend-row"><span class="opening-swatch" aria-hidden="true"></span><strong>Проём</strong></div>
-              <p>Точки расположены посередине пролётов между соседними лагами.</p>
-              <p>Проёмы и зоны отступа исключаются автоматически.</p>
+              <p>Крепления SlidFix устанавливаются на лаги в точках пересечения со стыками соседних досок.</p>
+              <p>Крепления не размещаются между лагами.</p>
+              <p>Проёмы и зоны отступа исключают отдельные пересечения.</p>
               <p class="legend-note">Визуализация показывает расположение креплений, а не их конструкцию.</p>
             </aside>
           </div>
         </div>
+
+        <p id="markerHint" class="field-note marker-hint" role="status" aria-live="polite"></p>
 
         <div class="panel results-panel">
           <div class="results-title"><div><span class="red-line"></span><strong>РЕЗУЛЬТАТ РАСЧЁТА</strong></div><span class="good">● Предварительная схема</span></div>
           <div class="metrics">
             <article><small>Общая площадь стены</small><strong id="grossArea">16,8 м²</strong><em id="grossDims">6,0 × 2,8 м</em></article>
             <article><small>Полезная площадь</small><strong id="netArea">14,6 м²</strong><em>за вычетом проёмов</em></article>
-            <article><small id="boardCountLabel">Количество досок по ширине</small><strong id="boardCourses">48</strong><em id="boardCourseNote">доска 125 мм</em></article>
+            <article><small>Количество досок</small><strong id="boardCount">48</strong><em id="boardCourseNote">доска 125 мм</em></article>
             <article class="accent"><small>Крепления SlidFix</small><strong id="unitCount">0</strong><em>шт.</em></article>
             <article><small>Упаковок необходимо</small><strong id="packCount">0</strong><em>10 шт. в упаковке</em></article>
             <article><small>Шурупов необходимо</small><strong id="screwCount">0</strong><em>2 шт. на крепление</em></article>
             <article><small>Количество лаг</small><strong id="lagCount">0</strong><em>оси каркаса</em></article>
-            <article><small>Количество пролётов</small><strong id="spanCount">0</strong><em>между соседними лагами</em></article>
-            <article><small>Количество рядов</small><strong id="rowCount">0</strong><em>ряды креплений по высоте</em></article>
+            <article><small>Количество стыков</small><strong id="jointCount">0</strong><em>между соседними досками</em></article>
+            <article><small>Количество точек монтажа</small><strong id="mountPointCount">0</strong><em>доступно в полной схеме</em></article>
           </div>
-          <p class="field-note">Количество осей и пролётов показано до исключения проёмов. Это схема, а не ведомость закупки каркаса.</p>
+          <p class="field-note">Доски и стыки посчитаны по полной стене. Точки монтажа — допустимые пересечения после исключения проёмов; крепления SlidFix — точки выбранной схемы. Это не ведомость раскроя.</p>
           <p class="field-note">Предварительный расчёт. Онлайн-заказ пока недоступен; скачайте схему или проект ниже.</p>
           <div class="actions">
             <button class="primary" id="cartBtn" disabled title="Онлайн-заказ пока недоступен">КОРЗИНА НЕ ПОДКЛЮЧЕНА</button>

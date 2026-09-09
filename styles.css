@@ -118,3 +118,10 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .metrics article:nth-child(3){border-right:0}
 .legend-card .legend-row{margin-top:15px}
 @media(max-width:720px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.metrics article:nth-child(3){border-right:1px solid #202b33}.orientation-options .pattern-card{min-height:85px}}
+
+/* Joint × perpendicular lag; all symbols remain abstract. */
+.joint-swatch{flex:0 0 18px;height:25px;background:linear-gradient(#bc9672,#bc9672) center/1px 100% no-repeat}
+.band-swatch{flex:0 0 18px;height:25px;background:#d5e2e838;border-left:1px solid #9fafbb;border-right:1px solid #9fafbb}
+.fastener-marker{cursor:help}
+.marker-hint{padding:12px 14px;margin:0;border:1px solid #26343e;border-radius:7px;background:#0e151a;min-height:42px}
+#wallSvg:focus-visible{outline:2px solid #c5d5df;outline-offset:3px}
