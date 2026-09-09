@@ -28,7 +28,14 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const svg = $('wallSvg');
 const NS = 'http://www.w3.org/2000/svg';
-const DEMO_WARNING = 'IMPORTANT: The current fastener spacing and placement algorithm is a UX/demo model. It must not be treated as final installation engineering guidance until SlidFix engineering rules are validated.';
+// Keep machine-readable state keys stable; localize only presentation strings.
+const PATTERN_LABELS = {standard:'стандартная', staggered:'шахматная'};
+const DENSITY_LABELS = {standard:'стандартная', dense:'усиленная'};
+const numberFormat = new Intl.NumberFormat('ru-RU', {maximumFractionDigits:6, useGrouping:false});
+const dimensionFormat = new Intl.NumberFormat('ru-RU', {minimumFractionDigits:1, maximumFractionDigits:1, useGrouping:false});
+const formatNumber = value => numberFormat.format(Number(value));
+const formatDimension = value => dimensionFormat.format(value);
+const DEMO_WARNING = 'Предварительный расчёт. Текущие параметры шага и расстановки используются для демонстрации работы калькулятора и будут уточнены после утверждения инженерного регламента SlidFix.';
 
 // These bounds only keep the preset geometry inside the wall; they are not installation rules.
 function syncOpeningInputs(editingId=null){
@@ -103,7 +110,7 @@ function calculateLayout(){
 
 function drawWall(){
   svg.innerHTML='';
-  el('title').textContent='SlidFix demo wall layout';
+  el('title').textContent='Схема расположения креплений SlidFix';
   el('desc').textContent=DEMO_WARNING;
   const {points,openings}=calculateLayout();
   const VW=1000,VH=540;
@@ -157,13 +164,13 @@ function drawWall(){
   // dimensions
   const dimY=y0-24; el('line',{x1:x0,y1:dimY,x2:x0+w,y2:dimY,stroke:'#d6dde2','stroke-width':1.4});
   el('path',{d:`M${x0} ${dimY} l10 -5 l0 10 z M${x0+w} ${dimY} l-10 -5 l0 10 z`,fill:'#d6dde2'});
-  text(x0+w/2,dimY-8,`${state.wallWidth.toFixed(1)} m`,{anchor:'middle',size:15});
+  text(x0+w/2,dimY-8,`${formatDimension(state.wallWidth)} м`,{anchor:'middle',size:15});
   const dimX=x0-28; el('line',{x1:dimX,y1:y0,x2:dimX,y2:y0+h,stroke:'#d6dde2','stroke-width':1.4});
   el('path',{d:`M${dimX} ${y0} l-5 10 l10 0 z M${dimX} ${y0+h} l-5 -10 l10 0 z`,fill:'#d6dde2'});
-  const ht=text(dimX-10,y0+h/2,`${state.wallHeight.toFixed(1)} m`,{anchor:'middle',size:14}); ht.setAttribute('transform',`rotate(-90 ${dimX-10} ${y0+h/2})`);
+  const ht=text(dimX-10,y0+h/2,`${formatDimension(state.wallHeight)} м`,{anchor:'middle',size:14}); ht.setAttribute('transform',`rotate(-90 ${dimX-10} ${y0+h/2})`);
 
   // bottom legend
-  text(pad.l,VH-19,`${points.length} SlidFix positions · ${state.pattern} · ${state.density} · DEMO ONLY`,{size:12,weight:500});
+  text(pad.l,VH-19,`SlidFix: ${points.length} шт. · ${PATTERN_LABELS[state.pattern]} · ${DENSITY_LABELS[state.density]} · ПРЕДВАРИТЕЛЬНАЯ СХЕМА`,{size:12,weight:500});
   updateResults(points.length, openings);
 }
 
@@ -174,11 +181,11 @@ function updateResults(unitCount,openings){
   const packs=Math.ceil(unitCount/ENGINEERING.packSize);
   const screws=unitCount*ENGINEERING.screwsPerUnit;
   const courses=Math.ceil((state.wallHeight*1000)/state.boardWidth);
-  $('grossArea').textContent=`${gross.toFixed(1)} m²`; $('grossDims').textContent=`${state.wallWidth.toFixed(1)} × ${state.wallHeight.toFixed(1)} m`;
-  $('netArea').textContent=`${net.toFixed(1)} m²`; $('boardCourses').textContent=courses; $('boardCourseNote').textContent=`${state.boardWidth} mm boards`;
+  $('grossArea').textContent=`${formatDimension(gross)} м²`; $('grossDims').textContent=`${formatDimension(state.wallWidth)} × ${formatDimension(state.wallHeight)} м`;
+  $('netArea').textContent=`${formatDimension(net)} м²`; $('boardCourses').textContent=courses; $('boardCourseNote').textContent=`доска ${formatNumber(state.boardWidth)} мм`;
   $('unitCount').textContent=unitCount; $('packCount').textContent=packs; $('screwCount').textContent=screws;
-  $('cartBtn').textContent=`${packs} PACK${packs===1?'':'S'} · CART NOT CONNECTED`;
-  $('miniPattern').textContent=`${state.pattern.toUpperCase()} · ${state.density.toUpperCase()} · ${state.battenSpacing} mm grid`;
+  $('cartBtn').textContent=`${packs} уп. · КОРЗИНА НЕ ПОДКЛЮЧЕНА`;
+  $('miniPattern').textContent=`${PATTERN_LABELS[state.pattern].toUpperCase()} · ${DENSITY_LABELS[state.density].toUpperCase()} · сетка ${formatNumber(state.battenSpacing)} мм`;
 }
 
 const inputIds=['wallWidth','wallHeight','boardWidth','battenSpacing','openingWidth','openingHeight'];
@@ -188,7 +195,7 @@ inputIds.forEach(id=>{
     const value=input.valueAsNumber;
     if(!Number.isFinite(value) || value<Number(input.min) || value>Number(input.max)){
       input.setAttribute('aria-invalid','true');
-      $('inputMessage').textContent=`Enter a value between ${input.min} and ${input.max}. The preview keeps the last valid value.`;
+      $('inputMessage').textContent=`Введите значение от ${formatNumber(input.min)} до ${formatNumber(input.max)}. Пока отображается последнее корректное значение.`;
       return;
     }
     input.removeAttribute('aria-invalid');
